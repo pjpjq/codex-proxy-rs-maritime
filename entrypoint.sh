@@ -1,6 +1,10 @@
 #!/bin/sh
 # Starts Redis (127.0.0.1 only, AOF in /data/redis), writes deploy/config.yaml from env, then execs CPR.
 set -eu
+# Debug aid: with CPR_HOLD_ON_EXIT=<sec>, report the exit code and stay up so logs/exec are readable
+# (a PID1 exit panics the Maritime VM and truncates output).
+trap 'rc=$?; echo "[cpr-entrypoint] exiting rc=$rc (uid $(id -u))" >&2; [ -z "${CPR_HOLD_ON_EXIT:-}" ] || sleep "$CPR_HOLD_ON_EXIT"' EXIT
+echo "[cpr-entrypoint] start uid=$(id -u)" >&2
 
 : "${CPR_DATABASE_URL:?CPR_DATABASE_URL secret is required}"
 : "${CPR_DATABASE_PASSWORD:?CPR_DATABASE_PASSWORD secret is required}"
@@ -81,4 +85,9 @@ echo "[cpr-entrypoint] redis ready; starting codex-proxy-rs on :${CPR_SERVER_POR
 # Passwords are in config.yaml; keep the URL override pointed at localhost Redis.
 unset CPR_DATABASE_PASSWORD CPR_REDIS_PASSWORD CPR_ADMIN_PASSWORD
 cd /app
+if [ -n "${CPR_HOLD_ON_EXIT:-}" ]; then
+  /app/bin/codex-proxy-rs "$@"
+  exit $?
+fi
+trap - EXIT
 exec /app/bin/codex-proxy-rs "$@"
