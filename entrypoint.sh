@@ -35,11 +35,15 @@ host:
   logging:
     level: 'info'
     stdout: true
+    oauth_recovery: false
+    request_dump: false
+    request_dump_retention_days: 1
     file:
       enabled: true
       directory: '/data/logs'
       retention_days: 3
       max_file_size_mb: 10
+  worker_shutdown_timeout_seconds: 30
 store:
   database:
     url: $(q "$CPR_DATABASE_URL")
@@ -50,8 +54,20 @@ store:
   pool:
     max_connections: ${CPR_DB_MAX_CONNECTIONS:-8}
 admin:
+  session_ttl_minutes: 10080
+  session_absolute_ttl_minutes: 43200
   default_username: $(q "${CPR_ADMIN_USERNAME:-admin@cpr.local}")
   default_password: $(q "$CPR_ADMIN_PASSWORD")
+client:
+  session_ttl_minutes: 1440
+api:
+  asset_directory: '/app/web/dist'
+  cors_allowed_origins: []
+  request_timeout_seconds: null
+  request_id_header: 'x-request-id'
+openai:
+  residency: us
+  account_routing_override: null
 YAML
 chmod 600 /data/config/config.yaml
 ln -sfn /data/config/config.yaml /app/deploy/config.yaml
